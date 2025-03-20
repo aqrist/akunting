@@ -1,6 +1,3 @@
-Here's a README.md file in Bahasa Indonesia for your project:
-
-```markdown:/Users/aqrist/Herd/app-akunting/README.md
 # Aplikasi Keuangan Software House
 
 Aplikasi manajemen keuangan untuk Software House yang membantu dalam pengelolaan transaksi keuangan, proyek, dan karyawan.
