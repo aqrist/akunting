@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProjectController extends Controller
 {
@@ -88,5 +89,188 @@ class ProjectController extends Controller
         return redirect()
             ->route('projects.index')
             ->with('success', 'Project berhasil dihapus');
+    }
+
+    public function generateInvoice(Project $project)
+    {
+        $totalAmount = $project->nilai_project;
+
+        // Get payment history
+        $payments = $project->transaksi()
+            ->where('jenis', 'pemasukan')
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        $existingPayments = $payments->sum('jumlah');
+        $remainingAmount = $totalAmount - $existingPayments;
+
+        // Format project description
+        $description = $project->keterangan;
+        $formattedDescription = [];
+
+        if ($description) {
+            // Split by numbered items
+            preg_match_all('/(\d+\.\s*\*\*.*?\*\*.*?)(?=\d+\.\s*\*\*|$)/s', $description, $matches);
+
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $section) {
+                    // Get section title
+                    preg_match('/\*\*(.*?)\*\*/', $section, $titleMatch);
+                    $title = $titleMatch[1] ?? '';
+
+                    // Get section items
+                    $items = [];
+                    preg_match_all('/- (.*?)(?=- |$)/s', $section, $itemMatches);
+                    if (!empty($itemMatches[1])) {
+                        $items = array_map('trim', $itemMatches[1]);
+                    }
+
+                    if ($title) {
+                        $formattedDescription[] = [
+                            'title' => $title,
+                            'items' => $items
+                        ];
+                    }
+                }
+            }
+        }
+
+        $invoiceNumber = 'INV/' . date('Ymd') . '/' . $project->id;
+
+        return view('projects.invoice', compact(
+            'project',
+            'invoiceNumber',
+            'remainingAmount',
+            'formattedDescription',
+            'totalAmount',
+            'payments',
+            'existingPayments'
+        ));
+    }
+
+    public function generateTagihan(Project $project)
+    {
+        $totalAmount = $project->nilai_project;
+
+        // Get payment history
+        $payments = $project->transaksi()
+            ->where('jenis', 'pemasukan')
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        $existingPayments = $payments->sum('jumlah');
+        $remainingAmount = $totalAmount - $existingPayments;
+
+        if ($remainingAmount <= 0) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project sudah lunas');
+        }
+
+        // Format project description seperti sebelumnya
+        $description = $project->keterangan;
+        $formattedDescription = [];
+        // ... kode formatting description ...
+
+        $tagihanNumber = 'TAG/' . date('Ymd') . '/' . $project->id;
+
+        $pdf = PDF::loadView('projects.tagihan_pdf', [
+            'project' => $project,
+            'tagihanNumber' => $tagihanNumber,
+            'remainingAmount' => $remainingAmount,
+            'formattedDescription' => $formattedDescription,
+            'totalAmount' => $totalAmount,
+            'payments' => $payments,
+            'existingPayments' => $existingPayments
+        ]);
+
+        return $pdf->download('tagihan-' . $project->nama_project . '-' . date('Ymd') . '.pdf');
+    }
+
+    public function generateNotaLunas(Project $project)
+    {
+        $totalAmount = $project->nilai_project;
+
+        // Get payment history
+        $payments = $project->transaksi()
+            ->where('jenis', 'pemasukan')
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        $existingPayments = $payments->sum('jumlah');
+
+        // Cek apakah sudah lunas
+        if ($existingPayments < $totalAmount) {
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('error', 'Project belum lunas');
+        }
+
+        // Format project description seperti sebelumnya
+        $description = $project->keterangan;
+        $formattedDescription = [];
+        // ... kode formatting description ...
+
+        $notaNumber = 'NOTA/' . date('Ymd') . '/' . $project->id;
+        $lastPayment = $payments->last();
+
+        $pdf = PDF::loadView('projects.nota_lunas_pdf', [
+            'project' => $project,
+            'notaNumber' => $notaNumber,
+            'formattedDescription' => $formattedDescription,
+            'totalAmount' => $totalAmount,
+            'payments' => $payments,
+            'existingPayments' => $existingPayments,
+            'lastPayment' => $lastPayment
+        ]);
+
+        return $pdf->download('nota-lunas-' . $project->nama_project . '-' . date('Ymd') . '.pdf');
+    }
+
+    public function generatePenawaran(Project $project)
+    {
+        $totalAmount = $project->nilai_project;
+
+        // Format project description
+        $description = $project->keterangan;
+        $formattedDescription = [];
+
+        if ($description) {
+            // Split by numbered items
+            preg_match_all('/(\d+\.\s*\*\*.*?\*\*.*?)(?=\d+\.\s*\*\*|$)/s', $description, $matches);
+
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $section) {
+                    // Get section title
+                    preg_match('/\*\*(.*?)\*\*/', $section, $titleMatch);
+                    $title = $titleMatch[1] ?? '';
+
+                    // Get section items
+                    $items = [];
+                    preg_match_all('/- (.*?)(?=- |$)/s', $section, $itemMatches);
+                    if (!empty($itemMatches[1])) {
+                        $items = array_map('trim', $itemMatches[1]);
+                    }
+
+                    if ($title) {
+                        $formattedDescription[] = [
+                            'title' => $title,
+                            'items' => $items
+                        ];
+                    }
+                }
+            }
+        }
+
+        $penawaranNumber = 'PNW/' . date('Ymd') . '/' . $project->id;
+
+        $pdf = PDF::loadView('projects.penawaran_pdf', [
+            'project' => $project,
+            'penawaranNumber' => $penawaranNumber,
+            'formattedDescription' => $formattedDescription,
+            'totalAmount' => $totalAmount
+        ]);
+
+        return $pdf->download('penawaran-' . $project->nama_project . '-' . date('Ymd') . '.pdf');
     }
 }

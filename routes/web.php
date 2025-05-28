@@ -22,6 +22,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Project
+    Route::get('/projects/{project}/invoice', [ProjectController::class, 'generateInvoice'])->name('projects.invoice');
+    Route::get('/projects/{project}/tagihan', [ProjectController::class, 'generateTagihan'])->name('projects.tagihan');
+    Route::get('/projects/{project}/nota-lunas', [ProjectController::class, 'generateNotaLunas'])->name('projects.nota-lunas');
+    Route::get('/projects/{project}/penawaran', [ProjectController::class, 'generatePenawaran'])->name('projects.penawaran');
     Route::resource('projects', ProjectController::class);
 
     // Transaksi

@@ -12,6 +12,28 @@
         <a href="{{ route('transaksi.by-project', $project->id) }}" class="btn btn-success">
             <i class="fa fa-money-bill me-2"></i>Lihat Transaksi
         </a>
+
+        @php
+            $totalAmount = $project->nilai_project;
+            $existingPayments = $project->total_dibayar;
+            $isFullyPaid = $existingPayments >= $totalAmount;
+        @endphp
+
+        @if (!$isFullyPaid)
+            <a href="{{ route('projects.invoice', $project) }}" class="btn btn-info">
+                <i class="fa fa-file-invoice me-2"></i>Invoice
+            </a>
+            <a href="{{ route('projects.tagihan', $project) }}" class="btn btn-primary">
+                <i class="fa fa-file-pdf me-2"></i>Tagihan
+            </a>
+        @else
+            <a href="{{ route('projects.nota-lunas', $project) }}" class="btn btn-success">
+                <i class="fa fa-check-circle me-2"></i>Nota Lunas
+            </a>
+        @endif
+        <a href="{{ route('projects.penawaran', $project) }}" class="btn btn-success">
+            <i class="fa fa-check-circle me-2"></i>Penawaran
+        </a>
     </div>
 @endsection
 
